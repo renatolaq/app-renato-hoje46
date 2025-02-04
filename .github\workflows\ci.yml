@@ -1,0 +1,52 @@
+name: Deploy to Azure and Explore GitHub Actions
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      IMAGE_REPOSITORY: sparkregistry.azurecr.io/${{ github.repository }}/${{ vars.REPOSITORY }}:${{ github.run_id }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -f Dockerfile -t $IMAGE_REPOSITORY .
+
+      - name: Login ACR
+        uses: docker/login-action@v2aas
+        with:
+          registry: sparkregistry.azurecr.io
+          username: sparkregistry
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Push Docker Image
+        run: docker push $IMAGE_REPOSITORY
+
+      # - name: "Login via Azure CLI"
+      #   uses: azure/login@v1
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # - name: Deploy ACI
+      #   run: |
+      #     echo "Creating container..."
+      #     az container create \
+      #       --resource-group ProdutoSpark \
+      #       --name ${{ vars.REPOSITORY }} \
+      #       --image $IMAGE_REPOSITORY \
+      #       --registry-username sparkregistry \
+      #       --registry-password ${{ secrets.REGISTRY_PASSWORD }} \
+      #       --cpu 1 \
+      #       --memory 1 \
+      #       --ports 8000 80 \
+      #       --ip-address Public \
+      #       --dns-name-label ${{ vars.REPOSITORY }} \
+      #       --os-type Linux \
+      #       --location eastus \
+      #       --restart-policy Always \
+      #       --environment-variables 'VAR_NAME'='value'
